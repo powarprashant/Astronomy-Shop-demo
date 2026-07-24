@@ -1,0 +1,27 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: astronomy-shop
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://open-telemetry.github.io/opentelemetry-helm-charts
+    chart: opentelemetry-demo
+    targetRevision: "*"
+    helm:
+      valuesObject:
+        # Iteration 1: keep the chart's bundled observability ON to get green fast.
+        # Iteration 2: disable these and wire to your own Prometheus/Grafana/Loki.
+        # Verify exact keys: helm show values open-telemetry/opentelemetry-demo
+        opensearch:
+          enabled: false        # heaviest bundled component — skip it to fit 2 nodes
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: astronomy-shop
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
