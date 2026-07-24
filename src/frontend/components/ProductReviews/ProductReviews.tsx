@@ -4,8 +4,9 @@
 import * as S from './ProductReviews.styled';
 import { useProductReview } from '../../providers/ProductReview.provider';
 import { useAiAssistant } from '../../providers/ProductAIAssistant.provider';
-import React, { useState, useMemo } from 'react';
+import React, { useEffect, useRef, useState, useMemo } from 'react';
 import { CypressFields } from '../../utils/enums/CypressFields';
+import Skeleton from '../Skeleton';
 
 const clamp = (n: number, min = 0, max = 5) => Math.max(min, Math.min(max, n));
 
@@ -54,17 +55,22 @@ const ProductReviews = () => {
 
     // AI Assistant (provider-driven)
     const [aiQuestion, setAiQuestion] = useState('');
-    const { sendAiRequest, aiResponse, aiLoading, aiError, reset } = useAiAssistant();
+    const { sendAiRequest, messages, aiLoading, resetConversation } = useAiAssistant();
+    const chatThreadRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        const el = chatThreadRef.current;
+        if (el) el.scrollTop = el.scrollHeight;
+    }, [messages, aiLoading]);
 
     const handleAskAI = (questionOverride?: string) => {
         const q = (questionOverride ?? aiQuestion).trim();
         if (!q) return;
-        reset(); // optional: clears previous result
-        sendAiRequest({ question: q });
+        sendAiRequest(q);
+        setAiQuestion('');
     };
 
     const handleQuickPrompt = (prompt: string) => {
-        setAiQuestion(prompt);
         handleAskAI(prompt);
     };
 
@@ -126,17 +132,23 @@ const ProductReviews = () => {
                 </S.QuickPromptButton>
             </S.AskAIControls>
 
-            {aiError && (
-                <S.AIMessage role="alert" data-cy="AIError">
-                    {aiError.message ?? 'Sorry, something went wrong while asking AI.'}
-                </S.AIMessage>
+            {!!messages.length && (
+                <S.ChatThread ref={chatThreadRef} role="log" aria-live="polite" data-cy={CypressFields.AIChatThread}>
+                    {messages.map((m) => (
+                        <S.ChatBubble key={m.id} $role={m.role} $error={m.error}>
+                            {m.text}
+                        </S.ChatBubble>
+                    ))}
+                    {aiLoading && (
+                        <S.TypingIndicator data-cy={CypressFields.AITypingIndicator}>AI is thinking…</S.TypingIndicator>
+                    )}
+                </S.ChatThread>
             )}
 
-            {aiResponse && (
-                <S.AIMessage aria-live="polite" data-cy="AIAnswer">
-                    <strong>AI Response:</strong>{' '}
-                    {typeof aiResponse === 'string' ? aiResponse : aiResponse.text}
-                </S.AIMessage>
+            {!!messages.length && (
+                <S.QuickPromptButton type="button" onClick={resetConversation} data-cy={CypressFields.AIClearChat}>
+                    Clear chat
+                </S.QuickPromptButton>
             )}
         </S.AskAISection>
 
@@ -145,7 +157,17 @@ const ProductReviews = () => {
         <S.Title>Customer Reviews</S.Title>
       </S.TitleContainer>
 
-        {loading && <p>Loading product reviews…</p>}
+        {loading && (
+            <S.ReviewsGrid as="ul">
+                {Array.from({ length: 5 }, (_, i) => (
+                    <S.ReviewCard as="li" key={i}>
+                        <Skeleton height="16px" width="60%" />
+                        <Skeleton height="14px" />
+                        <Skeleton height="14px" width="80%" />
+                    </S.ReviewCard>
+                ))}
+            </S.ReviewsGrid>
+        )}
 
         {!loading && error && <p>Could not load product reviews.</p>}
 

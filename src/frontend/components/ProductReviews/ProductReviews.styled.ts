@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import styled from 'styled-components';
+import { pulse } from '../../styles/animations';
 
 export const ProductReviews = styled.section`
   display: flex;
@@ -32,7 +33,7 @@ export const SummaryCard = styled.section`
   margin: 0 20px 24px;
   border: 1px solid ${({ theme }) => theme.colors.borderGray};
   border-radius: 8px;
-  background: ${({ theme }) => theme.colors.white};
+  background: ${({ theme }) => theme.colors.surface};
   display: grid;
   gap: 16px;
 
@@ -135,7 +136,7 @@ export const ReviewsGrid = styled.ul`
 export const ReviewCard = styled.li`
   border: 1px solid ${({ theme }) => theme.colors.borderGray};
   border-radius: 8px;
-  background: ${({ theme }) => theme.colors.white};
+  background: ${({ theme }) => theme.colors.surface};
   padding: 16px;
   display: grid;
   gap: 12px;
@@ -162,7 +163,7 @@ export const AskAISection = styled.section`
   margin: 0 20px 24px;
   border: 1px solid ${({ theme }) => theme.colors.borderGray};
   border-radius: 8px;
-  background: ${({ theme }) => theme.colors.white};
+  background: ${({ theme }) => theme.colors.surface};
   display: grid;
   gap: 12px;
 `;
@@ -170,7 +171,7 @@ export const AskAISection = styled.section`
 export const AskAIHeader = styled.h4`
   margin: 0;
   font-size: ${({ theme }) => theme.sizes.mLarge};
-  color: ${({ theme }) => theme.colors.otelGray};
+  color: ${({ theme }) => theme.colors.text};
 
   ${({ theme }) => theme.breakpoints.desktop} {
     font-size: ${({ theme }) => theme.sizes.dMedium};
@@ -193,8 +194,8 @@ export const AskAIInput = styled.input`
   border-radius: 6px;
   font-size: 16px;
   outline: none;
-  background: ${({ theme }) => theme.colors.white};
-  color: ${({ theme }) => theme.colors.otelGray};
+  background: ${({ theme }) => theme.colors.surface};
+  color: ${({ theme }) => theme.colors.text};
 
   &:focus {
     border-color: ${({ theme }) => theme.colors.otelBlue};
@@ -213,8 +214,8 @@ export const QuickPromptButton = styled.button`
   padding: 8px 12px;
   border: 1px solid ${({ theme }) => theme.colors.borderGray};
   border-radius: 6px;
-  background: ${({ theme }) => theme.colors.white};
-  color: ${({ theme }) => theme.colors.otelGray};
+  background: ${({ theme }) => theme.colors.surface};
+  color: ${({ theme }) => theme.colors.text};
   font-size: 14px;
   cursor: pointer;
 
@@ -251,5 +252,34 @@ export const AskAIButton = styled.button`
 export const AIMessage = styled.p`
   margin: 0;
   line-height: 1.5;
-  color: ${({ theme }) => theme.colors.otelGray};
+  color: ${({ theme }) => theme.colors.text};
+`;
+
+export const ChatThread = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 320px;
+  overflow-y: auto;
+  padding: 4px;
+`;
+
+export const ChatBubble = styled.div<{ $role: 'user' | 'assistant'; $error?: boolean }>`
+  align-self: ${({ $role }) => ($role === 'user' ? 'flex-end' : 'flex-start')};
+  max-width: 80%;
+  padding: 10px 14px;
+  border-radius: 12px;
+  line-height: 1.5;
+  background: ${({ $role, $error, theme }) =>
+    $error ? 'transparent' : $role === 'user' ? theme.colors.otelBlue : theme.colors.backgroundGray};
+  color: ${({ $role, $error, theme }) => ($error ? theme.colors.otelRed : $role === 'user' ? theme.colors.white : theme.colors.text)};
+  border: ${({ $error, theme }) => ($error ? `1px solid ${theme.colors.otelRed}` : 'none')};
+`;
+
+export const TypingIndicator = styled.div`
+  align-self: flex-start;
+  font-size: 14px;
+  font-style: italic;
+  color: ${({ theme }) => theme.colors.textLightGray};
+  animation: ${pulse} 1.4s ease-in-out infinite;
 `;

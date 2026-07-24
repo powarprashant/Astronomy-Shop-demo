@@ -17,15 +17,12 @@ html, body {
 }
 
 body {
-  background: white;
   margin: 0px;
   font-family: 'Open Sans', sans-serif;
 }
 
-body * {
+* {
   box-sizing: border-box;
-  color: #29293E;
-  font-weight: 600;
 }
 
 #__next {

@@ -20,19 +20,6 @@ export const Container = styled.div`
   }
 `;
 
-export const Image = styled.div<{ $src: string }>`
-  width: 100%;
-  height: 150px;
-
-  background: ${({ $src }) => `url("${$src}")`} no-repeat center;
-  background-size: contain;
-
-  ${({ theme }) => theme.breakpoints.desktop} {
-    height: 500px;
-    background-position: top;
-  }
-`;
-
 export const Details = styled.div<{ $fullWidth?: boolean }>`
   display: flex;
   flex-direction: column;

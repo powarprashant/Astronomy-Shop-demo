@@ -12,6 +12,8 @@ export const Select = styled.select`
   position: relative;
   width: 100px;
   cursor: pointer;
+  background: ${({ theme }) => theme.colors.surface};
+  color: ${({ theme }) => theme.colors.text};
 `;
 
 export const SelectContainer = styled.div`

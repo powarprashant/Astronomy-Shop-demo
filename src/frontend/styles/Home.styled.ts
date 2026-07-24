@@ -49,3 +49,19 @@ export const Home = styled.div`
     }
   }
 `;
+
+export const SkeletonGrid = styled.div`
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 24px;
+
+  ${({ theme }) => theme.breakpoints.desktop} {
+    grid-template-columns: repeat(3, auto);
+  }
+`;
+
+export const SkeletonCard = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+`;

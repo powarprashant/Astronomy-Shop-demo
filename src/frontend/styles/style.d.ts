@@ -5,6 +5,7 @@ import 'styled-components';
 
 declare module 'styled-components' {
   export interface DefaultTheme {
+    mode: 'light' | 'dark';
     colors: {
       otelBlue: string;
       otelYellow: string;
@@ -13,9 +14,12 @@ declare module 'styled-components' {
       backgroundGray: string;
       lightBorderGray: string;
       borderGray: string;
-      textGray: string; 
+      textGray: string;
       textLightGray: string;
       white: string;
+      background: string;
+      surface: string;
+      text: string;
     };
     sizes: {
       mLarge: string;
@@ -36,6 +40,18 @@ declare module 'styled-components' {
       regular: string;
       semiBold: string;
       light: string;
+    };
+    spacing: {
+      xs: string;
+      sm: string;
+      md: string;
+      lg: string;
+      xl: string;
+      xxl: string;
+    };
+    transitions: {
+      fast: string;
+      normal: string;
     };
   }
 }

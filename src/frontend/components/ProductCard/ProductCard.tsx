@@ -7,6 +7,7 @@ import ProductPrice from '../ProductPrice';
 import * as S from './ProductCard.styled';
 import { useState, useEffect } from 'react';
 import { useNumberFlagValue } from '@openfeature/react-sdk';
+import { useWishlist } from '../../providers/Wishlist.provider';
 
 interface IProps {
   product: Product;
@@ -31,6 +32,7 @@ const ProductCard = ({
 }: IProps) => {
   const imageSlowLoad = useNumberFlagValue('imageSlowLoad', 0);
   const [imageSrc, setImageSrc] = useState<string>('');
+  const { isWishlisted, toggleWishlist } = useWishlist();
 
   useEffect(() => {
     if (!picture) {
@@ -71,6 +73,19 @@ const ProductCard = ({
   return (
     <S.Link href={`/product/${id}`}>
       <S.ProductCard data-cy={CypressFields.ProductCard}>
+        <S.WishlistButton
+          type="button"
+          $active={isWishlisted(id)}
+          aria-label={isWishlisted(id) ? 'Remove from wishlist' : 'Add to wishlist'}
+          data-cy={CypressFields.WishlistToggle}
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            toggleWishlist(id);
+          }}
+        >
+          {isWishlisted(id) ? '♥' : '♡'}
+        </S.WishlistButton>
         <S.Image $src={imageSrc} />
         <div>
           <S.ProductName>{name}</S.ProductName>

@@ -11,9 +11,9 @@ export const Header = styled.header`
 
 export const NavBar = styled.nav`
   height: 80px;
-  background-color: white;
+  background-color: ${({ theme }) => theme.colors.surface};
   font-size: 15px;
-  color: #b4b2bb;
+  color: ${({ theme }) => theme.colors.textLightGray};
   border-bottom: 1px solid ${({ theme }) => theme.colors.textGray};
   z-index: 1;
   padding: 0;

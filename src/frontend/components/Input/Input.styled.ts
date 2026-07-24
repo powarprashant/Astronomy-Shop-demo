@@ -11,9 +11,10 @@ export const Input = styled.input`
 
   font-weight: ${({ theme }) => theme.fonts.regular};
   font-size: ${({ theme }) => theme.sizes.dMedium};
+  color: ${({ theme }) => theme.colors.text};
 
   border-radius: 10px;
-  background: #f9f9f9;
+  background: ${({ theme }) => theme.colors.backgroundGray};
   border: 1px solid #cacaca;
 `;
 
@@ -31,9 +32,10 @@ export const Select = styled.select`
   padding: 16px;
   font-weight: ${({ theme }) => theme.fonts.regular};
   font-size: ${({ theme }) => theme.sizes.dMedium};
+  color: ${({ theme }) => theme.colors.text};
 
   border-radius: 10px;
-  background: #f9f9f9;
+  background: ${({ theme }) => theme.colors.backgroundGray};
   border: 1px solid #cacaca;
 `;
 

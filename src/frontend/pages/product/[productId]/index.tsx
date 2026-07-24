@@ -12,6 +12,8 @@ import Layout from '../../../components/Layout';
 import ProductPrice from '../../../components/ProductPrice';
 import Recommendations from '../../../components/Recommendations';
 import ProductReviews from '../../../components/ProductReviews';
+import ImageZoom from '../../../components/ImageZoom';
+import Skeleton from '../../../components/Skeleton';
 import Select from '../../../components/Select';
 import { CypressFields } from '../../../utils/enums/CypressFields';
 import ApiGateway from '../../../gateways/Api.gateway';
@@ -47,12 +49,13 @@ const ProductDetail: NextPage = () => {
       priceUsd = { units: 0, currencyCode: 'USD', nanos: 0 },
       categories,
     } = {} as Product,
+    isLoading,
   } = useQuery({
       queryKey: ['product', productId, 'selectedCurrency', selectedCurrency],
       queryFn: () => ApiGateway.getProduct(productId, selectedCurrency),
       enabled: !!productId,
     }
-  ) as { data: Product };
+  ) as { data: Product; isLoading: boolean };
 
   const onAddItem = useCallback(async () => {
     await addItem({
@@ -73,34 +76,49 @@ const ProductDetail: NextPage = () => {
       <Layout>
         <S.ProductDetail data-cy={CypressFields.ProductDetail}>
           <S.Container>
-            {picture ? (
-              <S.Image
-                $src={`/images/products/${picture}`}
-                data-cy={CypressFields.ProductPicture}
-              />
-            ) : null}
-            <S.Details $fullWidth={!picture}>
-              <S.Name data-cy={CypressFields.ProductName}>{name}</S.Name>
-              <S.Description data-cy={CypressFields.ProductDescription}>{description}</S.Description>
-              <S.ProductPrice>
-                <ProductPrice price={priceUsd} />
-              </S.ProductPrice>
-              <S.Text>Quantity</S.Text>
-              <Select
-                data-cy={CypressFields.ProductQuantity}
-                onChange={event => setQuantity(+event.target.value)}
-                value={quantity}
-              >
-                {quantityOptions.map(option => (
-                  <option key={option} value={option}>
-                    {option}
-                  </option>
-                ))}
-              </Select>
-              <S.AddToCart data-cy={CypressFields.ProductAddToCart} onClick={onAddItem}>
-                <Image src="/icons/Cart.svg" height="15" width="15" alt="cart" /> Add To Cart
-              </S.AddToCart>
-            </S.Details>
+            {isLoading ? (
+              <>
+                <Skeleton height="500px" borderRadius="8px" />
+                <S.Details>
+                  <Skeleton height="32px" width="60%" />
+                  <Skeleton height="18px" />
+                  <Skeleton height="18px" width="80%" />
+                  <Skeleton height="28px" width="30%" />
+                </S.Details>
+              </>
+            ) : (
+              <>
+                {picture ? (
+                  <ImageZoom
+                    src={`/images/products/${picture}`}
+                    alt={name}
+                    dataCy={CypressFields.ProductPicture}
+                  />
+                ) : null}
+                <S.Details $fullWidth={!picture}>
+                  <S.Name data-cy={CypressFields.ProductName}>{name}</S.Name>
+                  <S.Description data-cy={CypressFields.ProductDescription}>{description}</S.Description>
+                  <S.ProductPrice>
+                    <ProductPrice price={priceUsd} />
+                  </S.ProductPrice>
+                  <S.Text>Quantity</S.Text>
+                  <Select
+                    data-cy={CypressFields.ProductQuantity}
+                    onChange={event => setQuantity(+event.target.value)}
+                    value={quantity}
+                  >
+                    {quantityOptions.map(option => (
+                      <option key={option} value={option}>
+                        {option}
+                      </option>
+                    ))}
+                  </Select>
+                  <S.AddToCart data-cy={CypressFields.ProductAddToCart} onClick={onAddItem}>
+                    <Image src="/icons/Cart.svg" height="15" width="15" alt="cart" /> Add To Cart
+                  </S.AddToCart>
+                </S.Details>
+              </>
+            )}
           </S.Container>
           {productId && (
               <ProductAIAssistantProvider productId={productId}>

@@ -6,8 +6,11 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import App, { AppContext, AppProps } from 'next/app';
 import CurrencyProvider from '../providers/Currency.provider';
 import CartProvider from '../providers/Cart.provider';
+import WishlistProvider from '../providers/Wishlist.provider';
+import ThemeModeProvider, { useThemeMode } from '../providers/ThemeMode.provider';
 import { ThemeProvider } from 'styled-components';
-import Theme from '../styles/Theme';
+import { lightTheme, darkTheme } from '../styles/Theme';
+import GlobalStyle from '../styles/GlobalStyle';
 import FrontendTracer from '../utils/telemetry/FrontendTracer';
 import SessionGateway from '../gateways/Session.gateway';
 import { OpenFeatureProvider, OpenFeature } from '@openfeature/react-sdk';
@@ -58,19 +61,31 @@ if (typeof window !== 'undefined') {
 
 const queryClient = new QueryClient();
 
-function MyApp({ Component, pageProps }: AppProps) {
+const ThemedApp = ({ Component, pageProps }: AppProps) => {
+  const { isDark } = useThemeMode();
   return (
-    <ThemeProvider theme={Theme}>
+    <ThemeProvider theme={isDark ? darkTheme : lightTheme}>
+      <GlobalStyle />
       <OpenFeatureProvider>
         <QueryClientProvider client={queryClient}>
           <CurrencyProvider>
             <CartProvider>
-              <Component {...pageProps} />
+              <WishlistProvider>
+                <Component {...pageProps} />
+              </WishlistProvider>
             </CartProvider>
           </CurrencyProvider>
         </QueryClientProvider>
       </OpenFeatureProvider>
     </ThemeProvider>
+  );
+};
+
+function MyApp(props: AppProps) {
+  return (
+    <ThemeModeProvider>
+      <ThemedApp {...props} />
+    </ThemeModeProvider>
   );
 }
 

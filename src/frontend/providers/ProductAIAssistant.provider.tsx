@@ -1,69 +1,101 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-import { createContext, useContext, useEffect, useMemo } from 'react';
-import { useMutation, MutateOptions } from '@tanstack/react-query';
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import { useMutation } from '@tanstack/react-query';
+import { v4 as uuidv4 } from 'uuid';
 import ApiGateway from '../gateways/Api.gateway';
 
 export interface AiRequestPayload {
-    question: string;
+  question: string;
 }
 
 export type AiResponse = { text: string } | string;
 
+export type ChatRole = 'user' | 'assistant';
+
+export interface ChatMessage {
+  id: string;
+  role: ChatRole;
+  text: string;
+  error?: boolean;
+}
+
 interface AiAssistantContextValue {
-    aiResponse: AiResponse | null;
-    aiLoading: boolean;
-    aiError: Error | null;
-    sendAiRequest: (
-        payload: AiRequestPayload,
-        options?: MutateOptions<AiResponse, Error, AiRequestPayload, unknown>
-    ) => void;
-    reset: () => void;
+  messages: ChatMessage[];
+  aiLoading: boolean;
+  sendAiRequest: (question: string) => void;
+  resetConversation: () => void;
 }
 
 const Context = createContext<AiAssistantContextValue>({
-    aiResponse: null,
-    aiLoading: false,
-    aiError: null,
-    sendAiRequest: () => {},
-    reset: () => {},
+  messages: [],
+  aiLoading: false,
+  sendAiRequest: () => {},
+  resetConversation: () => {},
 });
 
 export const useAiAssistant = () => useContext(Context);
 
 interface ProductAIAssistantProviderProps {
-    children: React.ReactNode;
-    productId: string;
+  children: React.ReactNode;
+  productId: string;
 }
 
 const ProductAIAssistantProvider = ({ children, productId }: ProductAIAssistantProviderProps) => {
-    const mutation = useMutation<AiResponse, Error, AiRequestPayload>({
-        mutationFn: ({ question }) => ApiGateway.askProductAIAssistant(productId, question),
-    });
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
 
-    // Clear AI state when switching products.
-    useEffect(() => {
-        mutation.reset();
-    }, [productId]);
+  const mutation = useMutation<AiResponse, Error, AiRequestPayload>({
+    mutationFn: ({ question }) => ApiGateway.askProductAIAssistant(productId, question),
+  });
 
-    const value = useMemo(
-        () => ({
-            aiResponse: mutation.data ?? null,
-            aiLoading: mutation.isPending,
-            aiError: mutation.error ?? null,
-            sendAiRequest: (
-                payload: AiRequestPayload,
-                options?: MutateOptions<AiResponse, Error, AiRequestPayload, unknown>
-            ) => {
-                mutation.mutate(payload, options);
-            },
-            reset: () => mutation.reset(),
-        }),
-        [mutation.data, mutation.isPending, mutation.error]
-    );
+  // Clear conversation when switching products.
+  useEffect(() => {
+    mutation.reset();
+    setMessages([]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [productId]);
 
-    return <Context.Provider value={value}>{children}</Context.Provider>;
+  const sendAiRequest = useCallback(
+    (question: string) => {
+      setMessages((prev) => [...prev, { id: uuidv4(), role: 'user', text: question }]);
+      mutation.mutate(
+        { question },
+        {
+          onSuccess: (data) => {
+            const text = typeof data === 'string' ? data : data.text;
+            setMessages((prev) => [...prev, { id: uuidv4(), role: 'assistant', text }]);
+          },
+          onError: (err) => {
+            setMessages((prev) => [
+              ...prev,
+              { id: uuidv4(), role: 'assistant', text: err.message ?? 'Sorry, something went wrong.', error: true },
+            ]);
+          },
+        }
+      );
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [mutation.mutate]
+  );
+
+  const resetConversation = useCallback(() => {
+    mutation.reset();
+    setMessages([]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const value = useMemo(
+    () => ({
+      messages,
+      aiLoading: mutation.isPending,
+      sendAiRequest,
+      resetConversation,
+    }),
+    [messages, mutation.isPending, sendAiRequest, resetConversation]
+  );
+
+  return <Context.Provider value={value}>{children}</Context.Provider>;
 };
 
 export default ProductAIAssistantProvider;
