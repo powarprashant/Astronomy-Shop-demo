@@ -17,7 +17,16 @@ spec:
         # Iteration 2: disable these and wire to your own Prometheus/Grafana/Loki.
         # Verify exact keys: helm show values open-telemetry/opentelemetry-demo
         opensearch:
-          enabled: false        # heaviest bundled component — skip it to fit 2 nodes
+          enabled: false # heaviest bundled component — skip it to fit 2 nodes
+        components:
+          email:
+            imageOverride:
+              repository: 361357546722.dkr.ecr.ap-south-1.amazonaws.com/email
+              tag: c3793e1a61d136adca6ae89b98b6ea5726ca011b
+          image-provider:
+            imageOverride:
+              repository: 361357546722.dkr.ecr.ap-south-1.amazonaws.com/image-provider
+              tag: c3793e1a61d136adca6ae89b98b6ea5726ca011b
   destination:
     server: https://kubernetes.default.svc
     namespace: astronomy-shop
