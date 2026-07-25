@@ -11,7 +11,10 @@ on:
 
 concurrency:
   group: astro-ci-cd-${{ github.ref }}
-  cancel-in-progress: false
+  # A new push/dispatch cancels whatever's still running on this ref, instead
+  # of queuing behind it - a stuck job (e.g. sonar-scan waiting on an offline
+  # self-hosted runner) should never block newer runs from starting.
+  cancel-in-progress: true
 
 env:
   AWS_REGION: ap-south-1
@@ -192,6 +195,7 @@ jobs:
     # get quality feedback even if an image build fails.
     needs: security-scan
     runs-on: self-hosted
+    timeout-minutes: 20  # bounds a hung scan/container once the runner picks the job up
     steps:
       - name: Checkout code
         uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10  # v6.0.3
