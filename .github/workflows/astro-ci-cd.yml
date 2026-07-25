@@ -25,6 +25,9 @@ jobs:
   security-scan:
     name: Secret & dependency scan
     runs-on: ubuntu-latest
+    outputs:
+      services: ${{ steps.detect-changes.outputs.services }}
+      any-changed: ${{ steps.detect-changes.outputs.any-changed }}
     steps:
       - name: Checkout code
         uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10  # v6.0.3
@@ -47,9 +50,71 @@ jobs:
           severity: CRITICAL,HIGH
           exit-code: '0'  # report-only for now - tighten to '1' once the backlog of existing findings is triaged
 
+      - name: Detect changed services
+        id: detect-changes
+        run: |
+          set -euo pipefail
+          cat > /tmp/all-services.json <<'JSON'
+          [
+            {"service":"accounting","dockerfile":"src/accounting/Dockerfile"},
+            {"service":"ad","dockerfile":"src/ad/Dockerfile"},
+            {"service":"cart","dockerfile":"src/cart/src/Dockerfile"},
+            {"service":"checkout","dockerfile":"src/checkout/Dockerfile"},
+            {"service":"currency","dockerfile":"src/currency/Dockerfile"},
+            {"service":"email","dockerfile":"src/email/Dockerfile"},
+            {"service":"flagd-ui","dockerfile":"src/flagd-ui/Dockerfile"},
+            {"service":"fraud-detection","dockerfile":"src/fraud-detection/Dockerfile"},
+            {"service":"frontend","dockerfile":"src/frontend/Dockerfile"},
+            {"service":"frontend-proxy","dockerfile":"src/frontend-proxy/Dockerfile"},
+            {"service":"image-provider","dockerfile":"src/image-provider/Dockerfile"},
+            {"service":"kafka","dockerfile":"src/kafka/Dockerfile"},
+            {"service":"llm","dockerfile":"src/llm/Dockerfile"},
+            {"service":"load-generator","dockerfile":"src/load-generator/Dockerfile"},
+            {"service":"payment","dockerfile":"src/payment/Dockerfile"},
+            {"service":"product-catalog","dockerfile":"src/product-catalog/Dockerfile"},
+            {"service":"product-reviews","dockerfile":"src/product-reviews/Dockerfile"},
+            {"service":"quote","dockerfile":"src/quote/Dockerfile"},
+            {"service":"recommendation","dockerfile":"src/recommendation/Dockerfile"},
+            {"service":"shipping","dockerfile":"src/shipping/Dockerfile"}
+          ]
+          JSON
+
+          BEFORE="${{ github.event.before }}"
+          ZERO_SHA="0000000000000000000000000000000000000000"
+
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] || [ -z "$BEFORE" ] || [ "$BEFORE" = "$ZERO_SHA" ] || ! git cat-file -e "${BEFORE}^{commit}" 2>/dev/null; then
+            echo "No diffable base commit (manual run or new branch) - building all services"
+            cp /tmp/all-services.json /tmp/changed-services.json
+          else
+            CHANGED_NAMES=()
+            while read -r svc; do
+              if ! git diff --quiet "$BEFORE" "${{ github.sha }}" -- "src/${svc}/"; then
+                CHANGED_NAMES+=("$svc")
+              fi
+            done < <(jq -r '.[].service' /tmp/all-services.json)
+
+            if [ "${#CHANGED_NAMES[@]}" -eq 0 ]; then
+              echo '[]' > /tmp/changed-services.json
+            else
+              NAMES_JSON=$(printf '%s\n' "${CHANGED_NAMES[@]}" | jq -R . | jq -s .)
+              jq -c --argjson names "$NAMES_JSON" '[.[] | select(.service as $s | $names | index($s))]' \
+                /tmp/all-services.json > /tmp/changed-services.json
+            fi
+          fi
+
+          SERVICES_JSON=$(cat /tmp/changed-services.json)
+          echo "services=$SERVICES_JSON" >> "$GITHUB_OUTPUT"
+          if [ "$SERVICES_JSON" = "[]" ]; then
+            echo "any-changed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "any-changed=true" >> "$GITHUB_OUTPUT"
+          fi
+          echo "Changed services: $(jq -r '[.[].service] | join(", ")' /tmp/changed-services.json)"
+
   build-scan-push:
     name: Build, scan, push ${{ matrix.service }}
     needs: security-scan
+    if: needs.security-scan.outputs.any-changed == 'true'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -57,47 +122,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - service: accounting
-            dockerfile: src/accounting/Dockerfile
-          - service: ad
-            dockerfile: src/ad/Dockerfile
-          - service: cart
-            dockerfile: src/cart/src/Dockerfile
-          - service: checkout
-            dockerfile: src/checkout/Dockerfile
-          - service: currency
-            dockerfile: src/currency/Dockerfile
-          - service: email
-            dockerfile: src/email/Dockerfile
-          - service: flagd-ui
-            dockerfile: src/flagd-ui/Dockerfile
-          - service: fraud-detection
-            dockerfile: src/fraud-detection/Dockerfile
-          - service: frontend
-            dockerfile: src/frontend/Dockerfile
-          - service: frontend-proxy
-            dockerfile: src/frontend-proxy/Dockerfile
-          - service: image-provider
-            dockerfile: src/image-provider/Dockerfile
-          - service: kafka
-            dockerfile: src/kafka/Dockerfile
-          - service: llm
-            dockerfile: src/llm/Dockerfile
-          - service: load-generator
-            dockerfile: src/load-generator/Dockerfile
-          - service: payment
-            dockerfile: src/payment/Dockerfile
-          - service: product-catalog
-            dockerfile: src/product-catalog/Dockerfile
-          - service: product-reviews
-            dockerfile: src/product-reviews/Dockerfile
-          - service: quote
-            dockerfile: src/quote/Dockerfile
-          - service: recommendation
-            dockerfile: src/recommendation/Dockerfile
-          - service: shipping
-            dockerfile: src/shipping/Dockerfile
+        include: ${{ fromJSON(needs.security-scan.outputs.services) }}
     steps:
       - name: Checkout code
         uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10  # v6.0.3
@@ -186,7 +211,8 @@ jobs:
 
   update-gitops:
     name: Bump image tags in apps/astronomy-shop.yaml
-    needs: build-scan-push
+    needs: [security-scan, build-scan-push]
+    if: needs.security-scan.outputs.any-changed == 'true'
     runs-on: ubuntu-latest
     permissions:
       contents: write  # required to push the tag-bump commit back to this repo
@@ -199,12 +225,7 @@ jobs:
       - name: Bump component image tags
         run: |
           set -euo pipefail
-          services=(
-            accounting ad cart checkout currency email flagd-ui fraud-detection
-            frontend frontend-proxy image-provider kafka llm load-generator payment
-            product-catalog product-reviews quote recommendation shipping
-          )
-          for svc in "${services[@]}"; do
+          echo '${{ needs.security-scan.outputs.services }}' | jq -r '.[].service' | while read -r svc; do
             yq -i ".spec.source.helm.valuesObject.components.${svc}.imageOverride.repository = \"${{ env.ECR_REGISTRY }}/${svc}\"" apps/astronomy-shop.yaml
             yq -i ".spec.source.helm.valuesObject.components.${svc}.imageOverride.tag = \"${{ env.IMAGE_TAG }}\"" apps/astronomy-shop.yaml
           done
