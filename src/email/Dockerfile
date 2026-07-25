@@ -20,7 +20,14 @@ COPY --from=builder /usr/local/bundle/ /usr/local/bundle/
 # already resolves net-imap to the patched 0.6.4 for Bundler-managed code
 # via `bundle exec`, but the stale copy is still present on disk and gets
 # flagged by image scanners). See CVE-2026-42257.
-RUN gem uninstall net-imap --force --ignore-dependencies --all || true
+#
+# `gem uninstall` does NOT work here: this image sets GEM_HOME=/usr/local/bundle
+# (confirmed via the image's own config), so a plain `gem uninstall` operates
+# on Bundler's gem directory, not on Ruby's own default-gems directory below
+# where the vulnerable copy actually lives - deleting the exact flagged path
+# directly instead.
+RUN rm -rf /usr/local/lib/ruby/gems/3.4.0/specifications/net-imap-0.5.8.gemspec \
+           /usr/local/lib/ruby/gems/3.4.0/gems/net-imap-0.5.8/
 
 WORKDIR /email_server
 
