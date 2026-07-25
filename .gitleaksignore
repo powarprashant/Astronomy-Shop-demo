@@ -1,0 +1,13 @@
+# Copyright The OpenTelemetry Authors
+# SPDX-License-Identifier: Apache-2.0
+#
+# security-scan scans the current tree only (gitleaks detect --no-git), not
+# full git history - see astro-ci-cd.yml for why. These 4 entries are
+# confirmed benign: Phoenix framework's standard scaffolded dev/test
+# secret_key_base values (never used in production - prod sources it from an
+# env var) and Grafana's demo-only signing key, none of which protect
+# anything real in this local-only demo deployment.
+compose.yaml:generic-api-key:670
+src/flagd-ui/config/dev.exs:generic-api-key:20
+src/flagd-ui/config/test.exs:generic-api-key:11
+src/grafana/grafana.ini:generic-api-key:253

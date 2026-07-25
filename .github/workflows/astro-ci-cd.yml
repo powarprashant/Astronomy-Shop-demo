@@ -35,15 +35,25 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10  # v6.0.3
         with:
-          fetch-depth: 0  # Gitleaks needs full history to scan past commits, not just the diff
+          fetch-depth: 0  # needed by the change-detection step below, which diffs github.event.before
           persist-credentials: false
 
-      # No exit-code override below - a detected secret fails this step and
-      # blocks every downstream job, unlike the report-only Trivy fs scan.
+      # Scans the current tree only (--no-git), not full git history. A
+      # manual workflow_dispatch run has no push/PR diff to scope to, so
+      # gitleaks-action's default behavior falls back to scanning *all* of
+      # history - surfacing years of noise from the original (unrelated)
+      # Google microservices-demo project this was forked from, none of it
+      # a real/live secret. Scanning the current tree instead is both
+      # trigger-independent and actually the more relevant check: is there
+      # a live secret in the repo right now. Confirmed false positives for
+      # the current tree are in .gitleaksignore. No exit-code override - a
+      # detected secret fails this step and blocks every downstream job,
+      # unlike the report-only Trivy fs scan.
       - name: Gitleaks secret scan
-        uses: gitleaks/gitleaks-action@e0c47f4f8be36e29cdc102c57e68cb5cbf0e8d1e  # v3.0.0
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          docker run --rm -v "${{ github.workspace }}:/repo" -w /repo \
+            zricethezav/gitleaks@sha256:c00b6bd0aeb3071cbcb79009cb16a60dd9e0a7c60e2be9ab65d25e6bc8abbb7f \
+            detect --no-git --source . --no-banner
 
       - name: Trivy filesystem/dependency scan
         uses: aquasecurity/trivy-action@a9c7b0f06e461e9d4b4d1711f154ee024b8d7ab8  # v0.36.0
