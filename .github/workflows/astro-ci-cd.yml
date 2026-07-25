@@ -1,3 +1,5 @@
+# Copyright The OpenTelemetry Authors
+# SPDX-License-Identifier: Apache-2.0
 name: Astro CI/CD (build, scan, push to ECR, bump GitOps repo)
 
 on:
