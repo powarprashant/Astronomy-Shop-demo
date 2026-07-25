@@ -97,7 +97,7 @@ jobs:
 
           if [ "${{ github.event_name }}" = "workflow_dispatch" ] || [ -z "$BEFORE" ] || [ "$BEFORE" = "$ZERO_SHA" ] || ! git cat-file -e "${BEFORE}^{commit}" 2>/dev/null; then
             echo "No diffable base commit (manual run or new branch) - building all services"
-            cp /tmp/all-services.json /tmp/changed-services.json
+            jq -c '.' /tmp/all-services.json > /tmp/changed-services.json
           else
             CHANGED_NAMES=()
             while read -r svc; do
