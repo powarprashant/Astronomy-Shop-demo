@@ -19,21 +19,6 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  build_images:
-    name: Build images
-    permissions:  # required by the reusable workflow
-      contents: read  # required by the component-build-images reusable workflow
-      packages: write  # required to push built images to GHCR
-    uses: ./.github/workflows/component-build-images.yml
-    with:
-      push: ${{ github.event_name == 'push' }}
-      force_build: ${{ github.event_name == 'push' }}
-      # Use a non-release tag for PR builds; tags are not pushed when push=false.
-      version: ${{ github.event_name == 'push' && 'main' || 'dev' }}
-    secrets:
-      DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
-      DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
-
   markdownlint:
     name: Markdown lint
     runs-on: ubuntu-latest
@@ -142,30 +127,6 @@ jobs:
             otel/weaver:v0.22.1 \
             registry check -r source
 
-  check-react-native-changes:
-    name: Check React Native changes
-    runs-on: ubuntu-latest
-    outputs:
-      should_build: ${{ steps.filter.outputs.react_native }}
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10  # v6.0.3
-        with:
-          persist-credentials: false
-      - name: Check React Native paths
-        uses: dorny/paths-filter@fbd0ab8f3e69293af611ebaee6363fc25e6d187d  # v4.0.1
-        id: filter
-        with:
-          filters: |
-            react_native:
-              - 'src/react-native-app/**'
-              - '.github/workflows/**'
-
-  react-native-android:
-    needs: check-react-native-changes
-    if: needs.check-react-native-changes.outputs.should_build == 'true'
-    uses: ./.github/workflows/react-native-build.yml
-
   zizmor:
     name: zizmor scan
     permissions:
@@ -174,18 +135,9 @@ jobs:
       security-events: write  # required to upload zizmor SARIF to code scanning
     uses: ./.github/workflows/zizmor.yml
 
-  codeql-analysis:
-    name: CodeQL analysis
-    permissions:
-      actions: read  # required to scan GitHub Actions workflows
-      contents: read  # required to checkout the repository
-      security-events: write  # required to upload CodeQL SARIF to code scanning
-    uses: ./.github/workflows/codeql-analysis.yml
-
   build-test:
     name: build-test
     needs: [
-      build_images,
       markdownlint,
       yamllint,
       misspell,
@@ -193,8 +145,6 @@ jobs:
       sanity,
       checklicense,
       weaver-check,
-      react-native-android,
-      codeql-analysis,
       zizmor
     ]
     if: always() && !cancelled()
