@@ -43,7 +43,7 @@ RUN npm ci --omit=dev
 
 # -----------------------------------------------------------------------------
 
-FROM gcr.io/distroless/nodejs24-debian13:nonroot@sha256:4c11c00f9d72bbe5d42fbcab421229b3c046d949f4e0a8e2d50e88a9b319a9e2
+FROM gcr.io/distroless/nodejs24-debian13:nonroot@sha256:af85d11ce7ef10172855a6e3649e3e8125b1b9e3ca41849ec2918036f05cb212
 
 WORKDIR /app
 
